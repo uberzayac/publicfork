@@ -1,10 +1,9 @@
-вот файл index.html для publicfork.vercel.app:
-внеси нужные правки и напиши мне готовую версию
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors https://bitrix-app-eight.vercel.app https://*.bitrix24.com https://*.bitrix24.ru;">
     <title>Калькулятор листовок</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
@@ -452,6 +451,16 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Дополнительные стили для iframe */
+        .deal-info {
+            background: #e8f5e8;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4CAF50;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -460,6 +469,9 @@
             <h1>Калькулятор листовок</h1>
             <img src="logo_new_rgb75.png" alt="Логотип">
         </div>
+
+        <!-- Блок с информацией о сделке (будет заполняться из URL) -->
+        <div id="dealInfo" class="deal-info" style="display: none;"></div>
 
         <div class="calculator-grid">
             <div class="input-section">
@@ -554,22 +566,22 @@
                 </div>
 
                 <!-- Ламинация и Резка -->
-<div class="lamination-cutting-group">
-    <div>
-        <label for="laminationSelect">Ламинация</label>
-        <select id="laminationSelect">
-            <option value="">Загрузка...</option>
-        </select>
-    </div>
-    <div>
-        <label for="cuttingSelect">Резка</label>
-        <select id="cuttingSelect">
-            <option value="none">без резки</option>
-            <option value="guillotine_percent">гильотина (10% от печати)</option>
-            <option value="plotter" disabled>плоттер (ПОКА НЕТУ)</option>
-        </select>
-    </div>
-</div
+                <div class="lamination-cutting-group">
+                    <div>
+                        <label for="laminationSelect">Ламинация</label>
+                        <select id="laminationSelect">
+                            <option value="">Загрузка...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="cuttingSelect">Резка</label>
+                        <select id="cuttingSelect">
+                            <option value="none">без резки</option>
+                            <option value="guillotine_percent">гильотина (10% от печати)</option>
+                            <option value="plotter" disabled>плоттер (ПОКА НЕТУ)</option>
+                        </select>
+                    </div>
+                </div>
 
                 <!-- Биговка/Фальцовка, Перфорация, Склейка -->
                 <div class="postpress-group">
@@ -728,6 +740,37 @@
             <p id="lastUpdate">Данные обновлены: -</p>
         </div>
     </div>
+
+    <script>
+        // Функция для получения параметров из URL
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                dealId: params.get('deal_id'),
+                dealTitle: params.get('deal_title')
+            };
+        }
+
+        // Показываем информацию о сделке, если есть ID
+        function showDealInfo() {
+            const { dealId, dealTitle } = getUrlParams();
+            const dealInfoEl = document.getElementById('dealInfo');
+            
+            if (dealId) {
+                dealInfoEl.style.display = 'block';
+                if (dealTitle) {
+                    dealInfoEl.innerHTML = `📋 Сделка #${dealId}: <strong>${decodeURIComponent(dealTitle)}</strong>`;
+                } else {
+                    dealInfoEl.innerHTML = `📋 ID сделки: <strong>${dealId}</strong>`;
+                }
+            } else {
+                dealInfoEl.style.display = 'none';
+            }
+        }
+
+        // Вызываем при загрузке страницы
+        window.addEventListener('DOMContentLoaded', showDealInfo);
+    </script>
 
     <!-- Подключение скриптов -->
     <script type="module" src="data.js"></script>

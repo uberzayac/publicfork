@@ -2,8 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Калькулятор листовок - загрузка</title>
-    <!-- Убираем мета-тег с frame-ancestors - он не работает -->
+    <title>Калькулятор листовок</title>
     <style>
         body {
             margin: 0;
@@ -43,14 +42,6 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        h3 {
-            color: #333;
-            margin: 10px 0;
-        }
-        p {
-            color: #666;
-            margin: 5px 0;
-        }
         .error {
             color: #d32f2f;
             background: #ffebee;
@@ -71,146 +62,215 @@
         .error button:hover {
             background: #b71c1c;
         }
-        .hidden {
-            display: none;
-        }
-        iframe {
-            width: 100%;
-            height: 100vh;
-            border: none;
+        .iframe-container {
             position: fixed;
             top: 0;
             left: 0;
-            z-index: 1000;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="mainContainer">
         <div class="loading" id="loading">
             <div class="spinner"></div>
             <h3>🔄 Загрузка калькулятора листовок...</h3>
-            <p id="status">Инициализация...</p>
+            <p id="status">Подготовка...</p>
         </div>
         <div id="error" class="error hidden"></div>
     </div>
-    <iframe id="calculatorFrame" style="display: none;" allow="camera; microphone; fullscreen"></iframe>
 
-    <!-- Загружаем Битрикс24 API с fallback -->
+    <div id="iframeContainer" class="iframe-container hidden">
+        <iframe id="calculatorFrame" allow="camera; microphone; fullscreen"></iframe>
+    </div>
+
     <script>
-        // Функция для загрузки скрипта с таймаутом
-        function loadScript(url, timeout = 5000) {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = url;
-                script.onload = resolve;
-                script.onerror = () => reject(new Error(`Failed to load script: ${url}`));
-                
-                const timer = setTimeout(() => {
-                    reject(new Error(`Script load timeout: ${url}`));
-                }, timeout);
-                
-                script.onload = () => {
-                    clearTimeout(timer);
-                    resolve();
-                };
-                
-                document.head.appendChild(script);
-            });
-        }
-
-        // Обновляем статус
+        // Функция для обновления статуса
         function setStatus(message) {
             const statusEl = document.getElementById('status');
             if (statusEl) statusEl.textContent = message;
         }
 
-        // Показываем ошибку
-        function showError(message, details = '') {
+        // Функция для показа ошибки
+        function showError(title, details = '') {
             document.getElementById('loading').style.display = 'none';
             const errorEl = document.getElementById('error');
             errorEl.classList.remove('hidden');
             errorEl.innerHTML = `
-                <h3>❌ Ошибка</h3>
-                <p>${message}</p>
-                ${details ? `<p><small>${details}</small></p>` : ''}
+                <h3>❌ ${title}</h3>
+                <p>${details}</p>
                 <button onclick="location.reload()">🔄 Повторить попытку</button>
                 <p style="margin-top: 20px; font-size: 12px; color: #999;">
-                    Проверьте подключение к интернету и доступность api.bitrix24.com
+                    Проверьте подключение к интернету и доступность сервисов
                 </p>
             `;
+        }
+
+        // Функция для загрузки калькулятора напрямую
+        function loadCalculatorDirect(dealId) {
+            setStatus('Загрузка калькулятора напрямую...');
+            
+            const iframeContainer = document.getElementById('iframeContainer');
+            const iframe = document.getElementById('calculatorFrame');
+            const mainContainer = document.getElementById('mainContainer');
+            
+            // Формируем URL
+            let url = `https://publicfork.vercel.app/?deal_id=${dealId}`;
+            
+            // Пробуем получить название сделки через URL (если передано)
+            const urlParams = new URLSearchParams(window.location.search);
+            const dealTitle = urlParams.get('deal_title');
+            if (dealTitle) {
+                url += `&deal_title=${encodeURIComponent(dealTitle)}`;
+            }
+            
+            console.log('Loading calculator directly:', url);
+            
+            iframe.src = url;
+            mainContainer.classList.add('hidden');
+            iframeContainer.classList.remove('hidden');
+        }
+
+        // Функция для проверки, находимся ли мы внутри iframe Битрикс24
+        function isInBitrixIframe() {
+            try {
+                return window.self !== window.top && 
+                       document.referrer.includes('bitrix24');
+            } catch (e) {
+                return true; // Если ошибка доступа, скорее всего мы в iframe
+            }
         }
 
         // Основная функция
         async function init() {
             try {
+                setStatus('Проверка окружения...');
+                
+                // Получаем deal_id из URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const dealId = urlParams.get('deal_id');
+                
+                if (!dealId) {
+                    showError('ID сделки не найден', 'Параметр deal_id отсутствует в URL');
+                    return;
+                }
+
+                // Проверяем, находимся ли мы внутри Битрикс24
+                if (!isInBitrixIframe()) {
+                    console.log('Not in Bitrix24 iframe, loading directly');
+                    loadCalculatorDirect(dealId);
+                    return;
+                }
+
                 setStatus('Загрузка Битрикс24 API...');
-                
-                // Пробуем загрузить Битрикс24 API
-                await loadScript('https://api.bitrix24.com/api/v1/', 3000);
-                
-                setStatus('Инициализация Битрикс24...');
-                
-                // Проверяем, что BX24 загрузился
-                if (typeof BX24 === 'undefined') {
-                    throw new Error('Библиотека BX24 не загружена');
+
+                // Пробуем загрузить BX24 разными способами
+                let bx24Loaded = false;
+
+                // Способ 1: Стандартный скрипт
+                try {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://api.bitrix24.com/api/v1/';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                        
+                        // Таймаут 5 секунд
+                        setTimeout(() => reject(new Error('Timeout')), 5000);
+                    });
+                    
+                    if (typeof BX24 !== 'undefined') {
+                        bx24Loaded = true;
+                        console.log('BX24 loaded via standard script');
+                    }
+                } catch (e) {
+                    console.log('Standard script failed:', e);
+                }
+
+                // Если не загрузилось, пробуем альтернативный URL
+                if (!bx24Loaded) {
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const script = document.createElement('script');
+                            script.src = 'https://cdn.bitrix24.com/api/v1/';
+                            script.onload = resolve;
+                            script.onerror = reject;
+                            document.head.appendChild(script);
+                            
+                            setTimeout(() => reject(new Error('Timeout')), 5000);
+                        });
+                        
+                        if (typeof BX24 !== 'undefined') {
+                            bx24Loaded = true;
+                            console.log('BX24 loaded via alternative URL');
+                        }
+                    } catch (e) {
+                        console.log('Alternative script failed:', e);
+                    }
+                }
+
+                // Если BX24 не загрузился, используем прямой доступ
+                if (!bx24Loaded || typeof BX24 === 'undefined') {
+                    console.log('BX24 not available, using direct access');
+                    loadCalculatorDirect(dealId);
+                    return;
                 }
 
                 // Инициализируем BX24
+                setStatus('Инициализация Битрикс24...');
+                
                 BX24.init(function() {
                     try {
                         setStatus('Получение данных о сделке...');
                         
-                        const placementInfo = BX24.placement.info();
-                        const dealId = placementInfo.options ? placementInfo.options.ID : null;
+                        // Пробуем получить ID из placement
+                        let currentDealId = dealId;
                         
-                        if (!dealId) {
-                            throw new Error('ID сделки не найден');
+                        try {
+                            const placementInfo = BX24.placement.info();
+                            if (placementInfo && placementInfo.options && placementInfo.options.ID) {
+                                currentDealId = placementInfo.options.ID;
+                            }
+                        } catch (e) {
+                            console.log('Could not get placement info, using URL param');
                         }
 
-                        setStatus('Загрузка калькулятора...');
-                        
-                        // Формируем URL калькулятора
-                        const calculatorUrl = `https://publicfork.vercel.app/?deal_id=${dealId}`;
-                        
-                        // Показываем iframe
-                        const iframe = document.getElementById('calculatorFrame');
-                        iframe.style.display = 'block';
-                        iframe.src = calculatorUrl;
-                        
-                        // Скрываем загрузку
-                        document.getElementById('loading').style.display = 'none';
-                        
-                        // Сообщаем Битрикс о загрузке
-                        setTimeout(() => BX24.resizeWindow(), 500);
+                        // Загружаем калькулятор
+                        loadCalculatorDirect(currentDealId);
                         
                     } catch (e) {
-                        showError('Ошибка при работе с Битрикс24', e.message);
+                        console.error('BX24 init error:', e);
+                        loadCalculatorDirect(dealId);
                     }
                 });
 
             } catch (e) {
-                console.error('Failed to load BX24:', e);
+                console.error('Fatal error:', e);
                 
-                // Если не удалось загрузить BX24, пробуем открыть калькулятор напрямую
+                // В случае критической ошибки пробуем прямой доступ
                 const urlParams = new URLSearchParams(window.location.search);
                 const dealId = urlParams.get('deal_id');
                 
                 if (dealId) {
-                    setStatus('Битрикс24 API недоступен, открываем калькулятор напрямую...');
-                    
-                    setTimeout(() => {
-                        const directUrl = `https://publicfork.vercel.app/?deal_id=${dealId}`;
-                        window.location.href = directUrl;
-                    }, 2000);
+                    loadCalculatorDirect(dealId);
                 } else {
-                    showError('Не удалось загрузить Битрикс24 API', 
-                        'Проверьте подключение к интернету. Если ошибка повторяется, обратитесь к администратору.');
+                    showError('Критическая ошибка', e.message);
                 }
             }
         }
 
-        // Запускаем инициализацию после загрузки страницы
+        // Запускаем инициализацию
         window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>

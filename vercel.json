@@ -1,7 +1,7 @@
 {
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/index.html",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
@@ -18,6 +18,23 @@
         {
           "key": "Content-Security-Policy",
           "value": "frame-ancestors https://bitrix-app-eight.vercel.app https://*.bitrix24.com https://*.bitrix24.ru;"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "ALLOW-FROM https://bitrix-app-eight.vercel.app"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://bitrix-app-eight.vercel.app"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
         }
       ]
     }

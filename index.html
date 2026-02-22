@@ -1,277 +1,780 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors https://bitrix-app-eight.vercel.app https://*.bitrix24.com https://*.bitrix24.ru;">
     <title>Калькулятор листовок</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #f5f5f5;
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .loading {
-            text-align: center;
-            padding: 40px;
-            background: white;
-            border-radius: 8px;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        #calculator { 
+            max-width: 1100px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 10px; 
+            padding: 30px; 
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-width: 500px;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin: 0;
+            flex-grow: 1;
+            text-align: center;
+            position: relative;
+            left: 10%;
+        }
+        
+        .header img {
+            width: 200px;
+            height: 55px;
+            object-fit: contain;
+        }
+        
+        .calculator-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 30px; 
             width: 100%;
         }
-        .spinner {
-            display: inline-block;
-            width: 50px;
-            height: 50px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #2196F3;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        
+        @media (max-width: 768px) {
+            .calculator-grid { 
+                grid-template-columns: 1fr; 
+                gap: 20px;
+            }
+            .header img { display: none; }
+            .header h1 { left: 0; }
+        }
+        
+        @media (max-width: 460px) {
+            body { padding: 10px; }
+            #calculator { padding: 15px; }
+            .input-section, .output-section { padding: 15px; }
+            
+            .row-fields,
+            .color-layout-group,
+            .material-density-group,
+            .postpress-group,
+            .cutting-group,
+            .delivery-discount-group {
+                margin-left: 0;
+                margin-right: 0;
+                gap: 10px;
+            }
+            
+            input[type="number"], 
+            input[type="text"], 
+            select { 
+                font-size: 14px;
+                padding: 8px;
+                height: 38px;
+            }
+            
+            .row-fields input,
+            .row-fields select,
+            .color-layout-group input,
+            .color-layout-group select,
+            .color-layout-group .radio-group {
+                height: 38px;
+                line-height: normal;
+            }
+            
+            .color-layout-group .radio-group {
+                display: flex;
+                align-items: center;
+                padding: 0 10px;
+                height: 38px;
+            }
+            
+            .color-layout-group .radio-group label {
+                margin-bottom: 0;
+                line-height: 1;
+            }
+            
+            label { font-size: 13px; }
+            
+            .button-group {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .button-group button {
+                width: 100%;
+                padding: 10px;
+                font-size: 14px;
+            }
+            
+            .density-options {
+                gap: 5px;
+            }
+            
+            .density-options label {
+                font-size: 12px;
+            }
+        }
+        
+        .input-section, .output-section { 
+            background: #f9f9f9; 
+            padding: 20px; 
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        input[type="number"], input[type="text"], select { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+            font-size: 16px; 
+        }
+        
+        .row-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
             margin-bottom: 20px;
+        }
+        
+        .color-layout-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .radio-group label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: normal;
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+        
+        .radio-group input[type="radio"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+        }
+        
+        .material-density-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .material-select {
+            width: 100%;
+        }
+        
+        .density-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .density-options label {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+        
+        .density-options input[type="radio"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+        }
+        
+        .print-type {
+            display: flex;
+            gap: 20px;
+            padding: 10px 10px 0 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .print-type label {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        
+        .print-type input[type="radio"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+        }
+        
+        .custom-size-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .lamination-cutting-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .postpress-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .postpress-group > div {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .postpress-group label {
+            font-size: 14px;
+            line-height: 1.3;
+            min-height: 36px;
+            display: flex;
+            align-items: flex-end;
+            margin-bottom: 5px;
+        }
+        
+        .postpress-group > div:first-child label {
+            font-size: 13px;
+            letter-spacing: -0.02em;
+        }
+        
+        .delivery-discount-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .delivery-discount-group input {
+            width: 100%;
+        }
+        
+        #discountInput {
+            -moz-appearance: textfield;
+        }
+        
+        #discountInput::-webkit-outer-spin-button,
+        #discountInput::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        .discount-label {
+            font-weight: normal;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .button-group button {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        
+        #saveLocalBtn {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        #saveLocalBtn:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        #saveBitrixBtn {
+            background: #2196F3;
+            color: white;
+        }
+        
+        #saveBitrixBtn:hover {
+            background: #1976D2;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        #addProductBtn {
+            background: #FF9800;
+            color: white;
+        }
+        
+        #addProductBtn:hover {
+            background: #F57C00;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .loading { text-align: center; padding: 20px; }
+        .results { margin-top: 20px; }
+        
+        .results h3 {
+            margin-bottom: 20px;
+        }
+        
+        .result-item { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 10px; 
+            padding-bottom: 10px; 
+            border-bottom: 1px solid #eee; 
+        }
+        
+        .total { 
+            font-weight: bold; 
+            font-size: 1.2em; 
+            color: #333; 
+            border-bottom: none; 
+        }
+        
+        .per-piece { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-top: 5px; 
+            padding-top: 5px; 
+            border-top: 2px solid #eee; 
+            font-weight: bold; 
+            color: #333; 
+            font-size: 1.1em; 
+        }
+        
+        .per-piece .label { font-size: 0.95em; }
+        .per-piece .value { color: #2c3e50; }
+        
+        .minimum-cost-message {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #dc3545;
+            font-size: 0.90em;
+            font-weight: 500;
+            color: #dc3545;
+            font-style: italic;
+        }
+        
+        .details { margin-top: 15px; font-size: 0.9em; color: #666; line-height: 1.5; }
+        .details p { margin-bottom: 5px; margin-top: 0; }
+        .details strong { color: #333; }
+        .error { background: #ffebee; color: #c62828; padding: 10px; border-radius: 5px; margin-top: 20px; }
+        .last-update { text-align: center; margin-top: 20px; color: #777; }
+        
+        .fit-info {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            border-radius: 4px;
+            font-size: 0.95em;
+            color: #0d47a1;
+            line-height: 1.5;
+        }
+        
+        .custom-size-error {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            border-radius: 4px;
+            font-size: 0.95em;
+            color: #c62828;
+            display: none;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .error {
-            color: #d32f2f;
-            background: #ffebee;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-        .error button {
-            background: #d32f2f;
-            color: white;
-            border: none;
-            padding: 10px 20px;
+
+        /* Дополнительные стили для iframe */
+        .deal-info {
+            background: #e8f5e8;
+            padding: 10px 15px;
             border-radius: 5px;
-            cursor: pointer;
+            margin-bottom: 20px;
+            border-left: 4px solid #4CAF50;
             font-size: 14px;
-            margin-top: 10px;
-        }
-        .error button:hover {
-            background: #b71c1c;
-        }
-        .iframe-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        .iframe-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        .hidden {
-            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="container" id="mainContainer">
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <h3>🔄 Загрузка калькулятора листовок...</h3>
-            <p id="status">Подготовка...</p>
+    <div id="calculator">
+        <div class="header">
+            <h1>Калькулятор листовок</h1>
+            <img src="logo_new_rgb75.png" alt="Логотип">
         </div>
-        <div id="error" class="error hidden"></div>
-    </div>
 
-    <div id="iframeContainer" class="iframe-container hidden">
-        <iframe id="calculatorFrame" allow="camera; microphone; fullscreen"></iframe>
+        <!-- Блок с информацией о сделке (будет заполняться из URL) -->
+        <div id="dealInfo" class="deal-info" style="display: none;"></div>
+
+        <div class="calculator-grid">
+            <div class="input-section">
+                <!-- Поле Клиент -->
+                <div class="form-group">
+                    <label for="clientInput">Клиент</label>
+                    <input type="text" id="clientInput" placeholder="Введите имя клиента">
+                </div>
+
+                <!-- Тираж и Формат -->
+                <div class="row-fields">
+                    <div>
+                        <label for="circulationInput">Тираж</label>
+                        <input type="number" id="circulationInput" min="1" max="5000" value="100">
+                    </div>
+                    <div>
+                        <label for="formatSelect">Формат</label>
+                        <select id="formatSelect">
+                            <option value="">Загрузка...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Поля для пользовательского формата -->
+                <div id="customSizeGroup" class="custom-size-group hidden">
+                    <div>
+                        <label for="customWidth">Длина (мм)</label>
+                        <input type="number" id="customWidth" min="1" max="450" value="100">
+                    </div>
+                    <div>
+                        <label for="customHeight">Ширина (мм)</label>
+                        <input type="number" id="customHeight" min="1" max="320" value="100">
+                    </div>
+                </div>
+
+                <!-- Информация о размещении -->
+                <div id="fitInfo" class="fit-info" style="display: none;"></div>
+                
+                <!-- Ошибка пользовательского формата -->
+                <div id="customSizeError" class="custom-size-error"></div>
+
+                <!-- Вид печати -->
+                <div class="form-group">
+                    <label>Вид печати</label>
+                    <div class="print-type">
+                        <label>
+                            <input type="radio" name="printType" value="40" checked>
+                            Односторонняя (4+0)
+                        </label>
+                        <label>
+                            <input type="radio" name="printType" value="44">
+                            Двусторонняя (4+4)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Подбор цвета и Кол-во макетов -->
+                <div class="color-layout-group">
+                    <div>
+                        <label>Подбор цвета:</label>
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" name="colorMatching" value="no" checked>
+                                нет
+                            </label>
+                            <label>
+                                <input type="radio" name="colorMatching" value="yes">
+                                да
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="layoutsCount">Кол-во макетов:</label>
+                        <input type="number" id="layoutsCount" min="1" value="1" step="1">
+                    </div>
+                </div>
+
+                <!-- Материал и Плотность -->
+                <div class="material-density-group">
+                    <div class="material-select">
+                        <label for="materialSelect">Материал</label>
+                        <select id="materialSelect">
+                            <option value="">Загрузка...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Плотность (г/м²)</label>
+                        <div id="densityContainer" class="density-options">
+                            <!-- Радиокнопки плотности будут добавлены через JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ламинация и Резка -->
+                <div class="lamination-cutting-group">
+                    <div>
+                        <label for="laminationSelect">Ламинация</label>
+                        <select id="laminationSelect">
+                            <option value="">Загрузка...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="cuttingSelect">Резка</label>
+                        <select id="cuttingSelect">
+                            <option value="none">без резки</option>
+                            <option value="guillotine_percent">гильотина (10% от печати)</option>
+                            <option value="plotter" disabled>плоттер (ПОКА НЕТУ)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Биговка/Фальцовка, Перфорация, Склейка -->
+                <div class="postpress-group">
+                    <div>
+                        <label for="scoringSelect">Биговка/<br>Фальцовка</label>
+                        <select id="scoringSelect">
+                            <option value="0">нет</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="foldingSelect">Перфорация</label>
+                        <select id="foldingSelect">
+                            <option value="0">нет</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="gluingSelect">Склейка</label>
+                        <select id="gluingSelect">
+                            <option value="0">нет</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Доставка и Скидка -->
+                <div class="delivery-discount-group">
+                    <div>
+                        <label for="deliveryInput">Доставка (руб)</label>
+                        <input type="number" id="deliveryInput" min="0" value="0" step="1">
+                    </div>
+                    <div>
+                        <label for="discountInput">Скидка <span class="discount-label">(от 0 до 10%)</span></label>
+                        <input type="number" id="discountInput" min="0" max="10" value="0" step="1" 
+                               oninput="this.value = Math.min(10, Math.max(0, this.value))">
+                    </div>
+                </div>
+
+                <!-- Группа кнопок -->
+                <div class="button-group">
+                    <button id="saveLocalBtn">Сохранить скрин на ПК</button>
+                    <button id="saveBitrixBtn">Сохранить скрин в Б24</button>
+                    <button id="addProductBtn">Добавить товар в Б24</button>
+                </div>
+            </div>
+
+            <!-- Правая колонка - результаты -->
+            <div class="output-section">
+                <div id="loading" class="loading">Загрузка данных...</div>
+                
+                <div id="results" style="display: none;">
+                    <h3>Результаты расчета</h3>
+                    
+                    <div class="result-item">
+                        <span>Стоимость печати:</span>
+                        <span id="printCost">0 руб.</span>
+                    </div>
+                    
+                    <div class="result-item">
+                        <span>Стоимость материала:</span>
+                        <span id="materialCost">0 руб.</span>
+                    </div>
+                    
+                    <div class="result-item">
+                        <span>Стоимость ламинации:</span>
+                        <span id="laminationCost">0 руб.</span>
+                    </div>
+                    
+                    <!-- Резка -->
+                    <div class="result-item" id="cuttingRow">
+                        <span>Стоимость резки:</span>
+                        <span id="cuttingCost">0 руб.</span>
+                    </div>
+                    
+                    <div class="result-item">
+                        <span>Стоимость биговки/фальцовки:</span>
+                        <span id="scoringCost">0 руб.</span>
+                    </div>
+                    
+                    <div class="result-item">
+                        <span>Стоимость перфорации:</span>
+                        <span id="foldingCost">0 руб.</span>
+                    </div>
+                    
+                    <!-- Склейка -->
+                    <div class="result-item">
+                        <span>Стоимость склейки:</span>
+                        <span id="gluingCost">0 руб.</span>
+                    </div>
+                    
+                    <!-- Подбор цвета -->
+                    <div class="result-item" id="colorMatchingRow" style="display: none;">
+                        <span>Подбор цвета:</span>
+                        <span id="colorMatchingCost">0 руб.</span>
+                    </div>
+                    
+                    <!-- Доплата за макеты -->
+                    <div class="result-item" id="layoutsRow" style="display: none;">
+                        <span>Доплата за макеты:</span>
+                        <span id="layoutsCost">0 руб.</span>
+                    </div>
+                    
+                    <!-- Скидка -->
+                    <div class="result-item" id="discountRow" style="display: none;">
+                        <span>Скидка:</span>
+                        <span id="discountAmount">0 руб.</span>
+                    </div>
+                    
+                    <!-- Доставка -->
+                    <div class="result-item">
+                        <span>Доставка:</span>
+                        <span id="deliveryCost">0 руб.</span>
+                    </div>
+                    
+                    <div class="result-item total">
+                        <span>Итого:</span>
+                        <span id="totalEl">0 руб.</span>
+                    </div>
+                    
+                    <div class="per-piece">
+                        <span class="label">Стоимость за 1 шт.:</span>
+                        <span class="value" id="perPieceEl">0.00 руб.</span>
+                    </div>
+                    
+                    <!-- Вес заказа (голубой цвет, размер 1em, пунктир сверху) -->
+                    <div class="result-item" id="orderWeight" style="margin-top: 5px; padding-top: 10px; border-top: 1px dashed #2196F3; font-size: 1em; color: #2196F3;">
+                        <span><strong>Вес заказа:</strong></span>
+                        <span id="weightValue" style="font-weight: bold;">0 г</span>
+                    </div>
+                    
+                    <div id="minimumCostMessage" class="minimum-cost-message" style="display: none;">
+                        <span>Минимальная стоимость печати:</span>
+                        <span id="minimumCostValue">950 ₽</span>
+                    </div>
+                    
+                    <div class="details" id="details"></div>
+                </div>
+                
+                <div id="error" class="error" style="display: none;">
+                    Произошла ошибка при загрузке данных
+                </div>
+            </div>
+        </div>
+
+        <div class="last-update">
+            <p id="lastUpdate">Данные обновлены: -</p>
+        </div>
     </div>
 
     <script>
-        // Функция для обновления статуса
-        function setStatus(message) {
-            const statusEl = document.getElementById('status');
-            if (statusEl) statusEl.textContent = message;
+        // Функция для получения параметров из URL
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                dealId: params.get('deal_id'),
+                dealTitle: params.get('deal_title')
+            };
         }
 
-        // Функция для показа ошибки
-        function showError(title, details = '') {
-            document.getElementById('loading').style.display = 'none';
-            const errorEl = document.getElementById('error');
-            errorEl.classList.remove('hidden');
-            errorEl.innerHTML = `
-                <h3>❌ ${title}</h3>
-                <p>${details}</p>
-                <button onclick="location.reload()">🔄 Повторить попытку</button>
-                <p style="margin-top: 20px; font-size: 12px; color: #999;">
-                    Проверьте подключение к интернету и доступность сервисов
-                </p>
-            `;
-        }
-
-        // Функция для загрузки калькулятора напрямую
-        function loadCalculatorDirect(dealId) {
-            setStatus('Загрузка калькулятора напрямую...');
+        // Показываем информацию о сделке, если есть ID
+        function showDealInfo() {
+            const { dealId, dealTitle } = getUrlParams();
+            const dealInfoEl = document.getElementById('dealInfo');
             
-            const iframeContainer = document.getElementById('iframeContainer');
-            const iframe = document.getElementById('calculatorFrame');
-            const mainContainer = document.getElementById('mainContainer');
-            
-            // Формируем URL
-            let url = `https://publicfork.vercel.app/?deal_id=${dealId}`;
-            
-            // Пробуем получить название сделки через URL (если передано)
-            const urlParams = new URLSearchParams(window.location.search);
-            const dealTitle = urlParams.get('deal_title');
-            if (dealTitle) {
-                url += `&deal_title=${encodeURIComponent(dealTitle)}`;
-            }
-            
-            console.log('Loading calculator directly:', url);
-            
-            iframe.src = url;
-            mainContainer.classList.add('hidden');
-            iframeContainer.classList.remove('hidden');
-        }
-
-        // Функция для проверки, находимся ли мы внутри iframe Битрикс24
-        function isInBitrixIframe() {
-            try {
-                return window.self !== window.top && 
-                       document.referrer.includes('bitrix24');
-            } catch (e) {
-                return true; // Если ошибка доступа, скорее всего мы в iframe
-            }
-        }
-
-        // Основная функция
-        async function init() {
-            try {
-                setStatus('Проверка окружения...');
-                
-                // Получаем deal_id из URL
-                const urlParams = new URLSearchParams(window.location.search);
-                const dealId = urlParams.get('deal_id');
-                
-                if (!dealId) {
-                    showError('ID сделки не найден', 'Параметр deal_id отсутствует в URL');
-                    return;
-                }
-
-                // Проверяем, находимся ли мы внутри Битрикс24
-                if (!isInBitrixIframe()) {
-                    console.log('Not in Bitrix24 iframe, loading directly');
-                    loadCalculatorDirect(dealId);
-                    return;
-                }
-
-                setStatus('Загрузка Битрикс24 API...');
-
-                // Пробуем загрузить BX24 разными способами
-                let bx24Loaded = false;
-
-                // Способ 1: Стандартный скрипт
-                try {
-                    await new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        script.src = 'https://api.bitrix24.com/api/v1/';
-                        script.onload = resolve;
-                        script.onerror = reject;
-                        document.head.appendChild(script);
-                        
-                        // Таймаут 5 секунд
-                        setTimeout(() => reject(new Error('Timeout')), 5000);
-                    });
-                    
-                    if (typeof BX24 !== 'undefined') {
-                        bx24Loaded = true;
-                        console.log('BX24 loaded via standard script');
-                    }
-                } catch (e) {
-                    console.log('Standard script failed:', e);
-                }
-
-                // Если не загрузилось, пробуем альтернативный URL
-                if (!bx24Loaded) {
-                    try {
-                        await new Promise((resolve, reject) => {
-                            const script = document.createElement('script');
-                            script.src = 'https://cdn.bitrix24.com/api/v1/';
-                            script.onload = resolve;
-                            script.onerror = reject;
-                            document.head.appendChild(script);
-                            
-                            setTimeout(() => reject(new Error('Timeout')), 5000);
-                        });
-                        
-                        if (typeof BX24 !== 'undefined') {
-                            bx24Loaded = true;
-                            console.log('BX24 loaded via alternative URL');
-                        }
-                    } catch (e) {
-                        console.log('Alternative script failed:', e);
-                    }
-                }
-
-                // Если BX24 не загрузился, используем прямой доступ
-                if (!bx24Loaded || typeof BX24 === 'undefined') {
-                    console.log('BX24 not available, using direct access');
-                    loadCalculatorDirect(dealId);
-                    return;
-                }
-
-                // Инициализируем BX24
-                setStatus('Инициализация Битрикс24...');
-                
-                BX24.init(function() {
-                    try {
-                        setStatus('Получение данных о сделке...');
-                        
-                        // Пробуем получить ID из placement
-                        let currentDealId = dealId;
-                        
-                        try {
-                            const placementInfo = BX24.placement.info();
-                            if (placementInfo && placementInfo.options && placementInfo.options.ID) {
-                                currentDealId = placementInfo.options.ID;
-                            }
-                        } catch (e) {
-                            console.log('Could not get placement info, using URL param');
-                        }
-
-                        // Загружаем калькулятор
-                        loadCalculatorDirect(currentDealId);
-                        
-                    } catch (e) {
-                        console.error('BX24 init error:', e);
-                        loadCalculatorDirect(dealId);
-                    }
-                });
-
-            } catch (e) {
-                console.error('Fatal error:', e);
-                
-                // В случае критической ошибки пробуем прямой доступ
-                const urlParams = new URLSearchParams(window.location.search);
-                const dealId = urlParams.get('deal_id');
-                
-                if (dealId) {
-                    loadCalculatorDirect(dealId);
+            if (dealId) {
+                dealInfoEl.style.display = 'block';
+                if (dealTitle) {
+                    dealInfoEl.innerHTML = `📋 Сделка #${dealId}: <strong>${decodeURIComponent(dealTitle)}</strong>`;
                 } else {
-                    showError('Критическая ошибка', e.message);
+                    dealInfoEl.innerHTML = `📋 ID сделки: <strong>${dealId}</strong>`;
                 }
+            } else {
+                dealInfoEl.style.display = 'none';
             }
         }
 
-        // Запускаем инициализацию
-        window.addEventListener('DOMContentLoaded', init);
+        // Вызываем при загрузке страницы
+        window.addEventListener('DOMContentLoaded', showDealInfo);
     </script>
+
+    <!-- Подключение скриптов -->
+    <script type="module" src="data.js"></script>
+    <script type="module" src="calc.js"></script>
+    <script type="module" src="ui.js"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbxFdnzxe6BGlbNFj6KG71gG8XVie6rdAzx45IJ59IqDlvXLTclXjJGRy6qI8mBZ421UAA/exec';
 
 const CACHE_KEY = 'print_calc_cache';
-const CACHE_TTL = 1 * 60 * 1000; // 1 час
+const CACHE_TTL = 1 * 60 * 1000; 
 
 // Полная база материалов с ценами за лист А3 в зависимости от плотности
 export const MATERIALS_DB = [

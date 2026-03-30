@@ -334,12 +334,6 @@
 
         <div class="calculator-grid">
             <div class="input-section">
-                <!-- Поле Клиент -->
-                <div class="form-group">
-                    <label for="clientInput">Клиент</label>
-                    <input type="text" id="clientInput" placeholder="Введите имя клиента">
-                </div>
-
                 <!-- Тираж и Формат -->
                 <div class="row-fields">
                     <div>
@@ -597,9 +591,67 @@
     <script type="module" src="calc.js"></script>
     <script type="module" src="ui.js"></script>
 
-    <!-- Скрипт для динамической подстройки высоты iframe в Битрикс24 -->
+    <!-- Скрипт для динамической подстройки высоты iframe в Битрикс24 и ограничения скидки -->
     <script>
         (function() {
+            // Функция для ограничения значения поля скидки
+            function restrictDiscountInput() {
+                const discountInput = document.getElementById('discountInput');
+                if (discountInput) {
+                    discountInput.addEventListener('input', function(e) {
+                        let value = parseFloat(this.value);
+                        
+                        // Если значение не число, устанавливаем 0
+                        if (isNaN(value)) {
+                            this.value = 0;
+                            return;
+                        }
+                        
+                        // Если значение больше 10, устанавливаем 10
+                        if (value > 10) {
+                            this.value = 10;
+                        }
+                        
+                        // Если значение меньше 0, устанавливаем 0
+                        if (value < 0) {
+                            this.value = 0;
+                        }
+                    });
+                    
+                    // Дополнительная проверка при изменении значения через стрелочки или программно
+                    discountInput.addEventListener('change', function(e) {
+                        let value = parseFloat(this.value);
+                        
+                        if (isNaN(value)) {
+                            this.value = 0;
+                            return;
+                        }
+                        
+                        if (value > 10) {
+                            this.value = 10;
+                        }
+                        
+                        if (value < 0) {
+                            this.value = 0;
+                        }
+                    });
+                    
+                    // Блокировка ввода букв и других символов (дополнительная защита)
+                    discountInput.addEventListener('keydown', function(e) {
+                        // Разрешаем: цифры, Backspace, Delete, Tab, Escape, Enter, стрелки
+                        const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                        if (allowedKeys.includes(e.key)) {
+                            return;
+                        }
+                        
+                        // Разрешаем цифры и точку (для десятичных дробей, но у нас step=1)
+                        if (!/^[\d.]$/.test(e.key)) {
+                            e.preventDefault();
+                        }
+                    });
+                }
+            }
+            
             // Функция для отправки высоты контента в родительское окно
             function sendHeightToParent() {
                 if (window.self !== window.top && typeof BX24 !== 'undefined') {
@@ -652,16 +704,22 @@
                 }
             }
 
-            // Вызываем при загрузке
+            // Инициализация ограничителя поля скидки
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', forceSetHeight);
+                document.addEventListener('DOMContentLoaded', function() {
+                    restrictDiscountInput();
+                    forceSetHeight();
+                });
             } else {
+                restrictDiscountInput();
                 forceSetHeight();
             }
 
             window.addEventListener('load', function() {
                 setTimeout(forceSetHeight, 100);
                 setTimeout(forceSetHeight, 500);
+                // Повторно применяем ограничитель на случай динамической загрузки
+                restrictDiscountInput();
             });
 
             // Отслеживаем изменения
@@ -685,6 +743,25 @@
 
             // Периодическая проверка (каждые 2 секунды)
             setInterval(sendHeightToParent, 2000);
+            
+            // Добавляем прослушивание динамического создания элементов
+            // на случай, если поле скидки будет пересоздаваться
+            const observerDiscount = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'childList') {
+                        const discountInput = document.getElementById('discountInput');
+                        if (discountInput && !discountInput.hasAttribute('data-restricted')) {
+                            restrictDiscountInput();
+                            discountInput.setAttribute('data-restricted', 'true');
+                        }
+                    }
+                });
+            });
+            
+            observerDiscount.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
         })();
     </script>
 </body>

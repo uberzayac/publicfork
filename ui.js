@@ -1,26 +1,21 @@
-// ui.js
+// uiilst.js
 import { calculate, getPrintPricePerSheet, getLaminationPricePerSheet, getMaterialPrice, SRA3, GAP, NON_LAMINATED_MATERIALS, SRA3_PLUS_MATERIALS } from './calc.js';
 import { loadData } from './data.js';
 
 let DATA;
 const MINIMUM_ORDER_COST = 950;
-const DELIVERY_PRODUCT_ID = 5208; // ID товара для доставки
+const DELIVERY_PRODUCT_ID = 5208;
 
-// Функция для получения параметра из URL
 function getUrlParameter(name) {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(name);
 }
 
-// Функция для расчета веса заказа
 function calculateOrderWeight(sheetsCount, density) {
     if (!sheetsCount || !density || sheetsCount <= 0 || density <= 0) return 0;
-    // Формула: количество листов * плотность * 0.145
-    // Результат в граммах
     return sheetsCount * density * 0.145;
 }
 
-// Функция для форматирования веса
 function formatWeight(grams) {
     if (grams < 1000) {
         return `${Math.round(grams)} г`;
@@ -33,17 +28,16 @@ function formatWeight(grams) {
 export async function initUI(data) {
     console.log('initUI вызван');
     DATA = data;
-    
     const loadingEl = document.getElementById('loading');
     const resultsEl = document.getElementById('results');
-    
+
     if (loadingEl) loadingEl.style.display = 'none';
     if (resultsEl) resultsEl.style.display = 'block';
-    
+
     initSelects();
     initDensityOptions();
     bindUI();
-    
+
     setTimeout(() => {
         const materialSelect = document.getElementById('materialSelect');
         if (materialSelect && materialSelect.options.length > 0) {
@@ -51,9 +45,8 @@ export async function initUI(data) {
         }
         recalc();
     }, 100);
-    
+
     updateLastUpdateTime();
-    
     console.log('Интерфейс инициализирован');
 }
 
@@ -61,7 +54,6 @@ function initSelects() {
     const formatSelect = document.getElementById('formatSelect');
     if (formatSelect && DATA.formats) {
         formatSelect.innerHTML = '';
-        
         DATA.formats.forEach(f => {
             const opt = document.createElement('option');
             opt.value = f.name;
@@ -77,7 +69,6 @@ function initSelects() {
         if (formatSelect.options.length > 0) formatSelect.selectedIndex = 0;
     }
 
-    // Инициализируем материалы из DATA
     updateMaterialSelect(DATA.materials);
 
     const lamSelect = document.getElementById('laminationSelect');
@@ -93,11 +84,9 @@ function initSelects() {
     }
 }
 
-// Функция для обновления выпадающего списка материалов
 function updateMaterialSelect(materialsArray) {
     const materialSelect = document.getElementById('materialSelect');
     if (!materialSelect) return;
-    
     materialSelect.innerHTML = '';
     materialsArray.forEach((m, index) => {
         const opt = document.createElement('option');
@@ -113,7 +102,7 @@ function updateMaterialSelect(materialsArray) {
 function initDensityOptions() {
     const densityContainer = document.getElementById('densityContainer');
     if (densityContainer) {
-        densityContainer.innerHTML = '<span style="color: #999; padding: 5px;">Загрузка...</span>';
+        densityContainer.innerHTML = 'Загрузка...';
     }
 }
 
@@ -121,15 +110,14 @@ function updateDensityOptions(materialIndex) {
     const densityContainer = document.getElementById('densityContainer');
     if (!densityContainer) return;
     
-    // Определяем, какие материалы сейчас используются
     const materialSelect = document.getElementById('materialSelect');
     const currentMaterials = materialSelect._materialsArray || DATA.materials;
     const material = currentMaterials[materialIndex];
-    
+
     if (!material) return;
-    
+
     densityContainer.innerHTML = '';
-    
+
     if (material.densities && material.densities.length > 0) {
         material.densities.forEach((density, idx) => {
             const label = document.createElement('label');
@@ -162,7 +150,7 @@ function bindUI() {
         materialSelect.removeEventListener('change', handleMaterialChange);
         materialSelect.addEventListener('change', handleMaterialChange);
     }
-    
+
     document.addEventListener('change', function(e) {
         if (e.target.name === 'density' || 
             e.target.name === 'colorMatching' ||
@@ -176,7 +164,7 @@ function bindUI() {
             recalc();
         }
     });
-    
+
     document.addEventListener('input', function(e) {
         if (e.target.id === 'layoutsCount' ||
             e.target.id === 'deliveryInput' ||
@@ -184,7 +172,7 @@ function bindUI() {
             recalc();
         }
     });
-    
+
     const customWidth = document.getElementById('customWidth');
     const customHeight = document.getElementById('customHeight');
     if (customWidth) {
@@ -195,7 +183,7 @@ function bindUI() {
         customHeight.removeEventListener('input', recalc);
         customHeight.addEventListener('input', recalc);
     }
-    
+
     document.querySelectorAll('input:not(#customWidth):not(#customHeight):not(#layoutsCount):not(#deliveryInput):not(#discountInput), select:not(#formatSelect):not(#materialSelect):not(#cuttingSelect)').forEach(el => {
         el.removeEventListener('change', recalc);
         el.removeEventListener('input', recalc);
@@ -208,13 +196,13 @@ function bindUI() {
         saveLocalBtn.removeEventListener('click', handleLocalSave);
         saveLocalBtn.addEventListener('click', handleLocalSave);
     }
-    
+
     const saveBitrixBtn = document.getElementById('saveBitrixBtn');
     if (saveBitrixBtn) {
         saveBitrixBtn.removeEventListener('click', handleBitrixSave);
         saveBitrixBtn.addEventListener('click', handleBitrixSave);
     }
-    
+
     const addProductBtn = document.getElementById('addProductBtn');
     if (addProductBtn) {
         addProductBtn.removeEventListener('click', handleAddProduct);
@@ -231,7 +219,6 @@ function handleMaterialChange() {
 function handleFormatChange() {
     const formatSelect = document.getElementById('formatSelect');
     const customSizeGroup = document.getElementById('customSizeGroup');
-    const fitInfo = document.getElementById('fitInfo');
     const customSizeError = document.getElementById('customSizeError');
     
     if (formatSelect.value === 'custom') {
@@ -240,7 +227,7 @@ function handleFormatChange() {
         customSizeGroup.classList.add('hidden');
         customSizeError.style.display = 'none';
     }
-    
+
     recalc();
 }
 
@@ -252,11 +239,9 @@ async function handleLocalSave() {
             recalc();
             await new Promise(resolve => setTimeout(resolve, 100));
         }
-
         const screenshotBase64 = await createScreenshot();
         downloadScreenshot(screenshotBase64, getClientName());
         showNotification('Скриншот сохранен на ПК', 'success');
-        
     } catch (error) {
         console.error('Ошибка:', error);
         showNotification(`Ошибка: ${error.message}`, 'error');
@@ -270,7 +255,6 @@ async function handleBitrixSave() {
             alert('Сохранение отменено: не указан ID сделки');
             return;
         }
-
         const totalEl = document.getElementById('totalEl');
         if (!totalEl || totalEl.textContent === '0 руб.') {
             alert('Сначала выполните расчет!');
@@ -288,7 +272,6 @@ async function handleBitrixSave() {
         } else {
             throw new Error(result?.error || 'Неизвестная ошибка');
         }
-        
     } catch (error) {
         console.error('Ошибка:', error);
         showNotification(`Ошибка: ${error.message}`, 'error');
@@ -297,24 +280,17 @@ async function handleBitrixSave() {
     }
 }
 
-// Функция для получения ID товара по умолчанию в зависимости от формата
 function getDefaultProductId(format) {
     const productIds = {
-        'А3': 5206,
-        'A3': 5206,
-        'А4': 5204,
-        'A4': 5204,
-        'А5': 5202,
-        'A5': 5202,
-        'А6': 5200,
-        'A6': 5200,
+        'А3': 5206, 'A3': 5206,
+        'А4': 5204, 'A4': 5204,
+        'А5': 5202, 'A5': 5202,
+        'А6': 5200, 'A6': 5200,
         'custom': 5198
     };
-    
     return productIds[format] || 5198;
 }
 
-// Функция для добавления товара в сделку
 async function handleAddProduct() {
     try {
         const formatSelectEl = document.getElementById('formatSelect');
@@ -322,13 +298,11 @@ async function handleAddProduct() {
         const deliveryInput = document.getElementById('deliveryInput');
         const deliveryCost = parseFloat(deliveryInput?.value) || 0;
         
-        // Запрашиваем ID сделки и ID товара с автоподстановкой
         const { dealId, productId } = await requestDealAndProductId(selectedFormat);
         if (!dealId || !productId) {
             return;
         }
 
-        // Проверяем, есть ли результаты расчета
         const totalEl = document.getElementById('totalEl');
         const perPieceEl = document.getElementById('perPieceEl');
         const circulationInput = document.getElementById('circulationInput');
@@ -339,7 +313,6 @@ async function handleAddProduct() {
             await new Promise(resolve => setTimeout(resolve, 100));
         }
 
-        // Получаем результат расчета
         const materialSelect = document.getElementById('materialSelect');
         const laminationSelect = document.getElementById('laminationSelect');
         const cuttingSelect = document.getElementById('cuttingSelect');
@@ -363,7 +336,6 @@ async function handleAddProduct() {
         }
         
         const materialIndex = materialSelect.value;
-        // Используем правильный массив материалов
         const currentMaterials = materialSelect._materialsArray || DATA.materials;
         const material = currentMaterials[materialIndex];
         
@@ -392,7 +364,6 @@ async function handleAddProduct() {
 
         const result = calculate(input, DATA);
         
-        // Получаем цену за штуку БЕЗ доставки (используем discountedTotal)
         const quantity = parseInt(circulationInput.value) || 1;
         const priceWithoutDelivery = result.discountedTotal / quantity;
         
@@ -402,14 +373,12 @@ async function handleAddProduct() {
 
         showLoadingIndicator('Добавление товара в сделку...');
         
-        // Добавляем основной товар в сделку (без учета доставки)
         const result1 = await addProductToDeal(dealId, productId, quantity, priceWithoutDelivery);
         
         if (!result1 || !result1.success) {
             throw new Error(result1?.error || 'Ошибка при добавлении основного товара');
         }
         
-        // Если есть доставка, добавляем товар доставки
         if (deliveryCost > 0) {
             const result2 = await addProductToDeal(dealId, DELIVERY_PRODUCT_ID, 1, deliveryCost);
             
@@ -422,7 +391,6 @@ async function handleAddProduct() {
         } else {
             showNotification(`Товар добавлен в сделку #${dealId}`, 'success');
         }
-        
     } catch (error) {
         console.error('Ошибка:', error);
         showNotification(`Ошибка: ${error.message}`, 'error');
@@ -431,12 +399,10 @@ async function handleAddProduct() {
     }
 }
 
-// Функция для запроса ID сделки и ID товара с автоподстановкой из URL
 function requestDealAndProductId(selectedFormat) {
     return new Promise((resolve) => {
         const defaultProductId = getDefaultProductId(selectedFormat);
-        const urlDealId = getUrlParameter('deal_id'); // Получаем ID из URL
-        
+        const urlDealId = getUrlParameter('deal_id');
         const modal = document.createElement('div');
         modal.style.cssText = `
             position: fixed;
@@ -548,7 +514,6 @@ function requestDealAndProductId(selectedFormat) {
             resolve({ dealId: null, productId: null });
         });
         
-        // Обработка Enter
         const dealInput = document.getElementById('dealIdInput');
         const productInput = document.getElementById('productIdInput');
         
@@ -566,11 +531,9 @@ function requestDealAndProductId(selectedFormat) {
     });
 }
 
-// Функция для запроса ID сделки с автоподстановкой из URL
 function requestDealId() {
     return new Promise((resolve) => {
-        const urlDealId = getUrlParameter('deal_id'); // Получаем ID из URL
-        
+        const urlDealId = getUrlParameter('deal_id');
         const modal = document.createElement('div');
         modal.style.cssText = `
             position: fixed;
@@ -667,12 +630,9 @@ function requestDealId() {
     });
 }
 
-// Функция для добавления товара в сделку через Битрикс24 (crm.item.productrow.add)
 async function addProductToDeal(dealId, productId, quantity, price) {
     try {
         const webhookUrl = "https://gvprint.bitrix24.ru/rest/10/33sjwnbap09wrl0j/";
-        
-        // Формируем данные для добавления товарной позиции
         const requestData = {
             fields: {
                 ownerId: parseInt(dealId),
@@ -684,7 +644,7 @@ async function addProductToDeal(dealId, productId, quantity, price) {
             }
         };
         
-        console.log('Отправка товарной позиции (crm.item.productrow.add):', requestData);
+        console.log('Отправка товарной позиции:', requestData);
         
         const response = await fetch(webhookUrl + 'crm.item.productrow.add.json', {
             method: 'POST',
@@ -706,21 +666,9 @@ async function addProductToDeal(dealId, productId, quantity, price) {
         }
         
         return { success: true, result };
-        
     } catch (error) {
         console.error('Ошибка добавления товара:', error);
         throw error;
-    }
-}
-
-// Функция для проверки, используется ли увеличенный формат
-async function checkIfSRA3PlusUsed(input) {
-    try {
-        // Временный расчет для проверки формата
-        const result = await calculate(input, DATA);
-        return result.isSRA3Plus;
-    } catch (error) {
-        return false;
     }
 }
 
@@ -771,7 +719,6 @@ function recalc() {
             return;
         }
         
-        // Скрываем ошибки по умолчанию
         if (customSizeError) customSizeError.style.display = 'none';
         
         const input = {
@@ -799,7 +746,6 @@ function recalc() {
 
         const result = calculate(input, DATA);
         
-        // Проверка на совместимость материала и ламинации (после расчета, чтобы получить isSRA3Plus)
         const isNonLaminated = NON_LAMINATED_MATERIALS.includes(material.name);
         const hasLamination = laminationSelect.value && !laminationSelect.value.toLowerCase().includes('без ламинации');
         
@@ -814,30 +760,24 @@ function recalc() {
             return;
         }
         
-        // Если используется увеличенный формат, обновляем список материалов
         if (result.isSRA3Plus) {
-            // Сохраняем текущий выбранный материал
             const currentMaterialIndex = materialSelect.value;
             
-            // Обновляем select только для мелованной бумаги
             if (!materialSelect._isSRA3Plus) {
                 materialSelect._materialsArray = SRA3_PLUS_MATERIALS;
                 updateMaterialSelect(SRA3_PLUS_MATERIALS);
                 materialSelect._isSRA3Plus = true;
                 
-                // Обновляем плотности для нового материала
                 setTimeout(() => {
                     updateDensityOptions(0);
                 }, 10);
             }
         } else {
-            // Возвращаем стандартные материалы
             if (materialSelect._isSRA3Plus) {
                 materialSelect._materialsArray = DATA.materials;
                 updateMaterialSelect(DATA.materials);
                 materialSelect._isSRA3Plus = false;
                 
-                // Восстанавливаем выбранный материал
                 setTimeout(() => {
                     const savedIndex = DATA.materials.findIndex(m => m.name === material.name);
                     if (savedIndex >= 0) {
@@ -848,7 +788,6 @@ function recalc() {
             }
         }
         
-        // Обновляем информацию о размещении с учетом формата листа
         if (fitInfo && result.fitDetails && result.fitDetails.count > 0) {
             const sheetsNeeded = Math.ceil(input.circulation / result.fitDetails.count);
             fitInfo.innerHTML = `${result.fitDetails.cols} (по кор.) x ${result.fitDetails.rows} (по дл.) = ${result.fitDetails.count} на лист ${result.sheetSizeForDisplay} мм, ${sheetsNeeded} л.`;
@@ -858,7 +797,6 @@ function recalc() {
         }
         
         displayResults(result, input);
-        
     } catch (error) {
         console.error('Ошибка расчета:', error);
         
@@ -885,16 +823,16 @@ function clearResults() {
     
     const colorMatchingRow = document.getElementById('colorMatchingRow');
     if (colorMatchingRow) colorMatchingRow.style.display = 'none';
-    
+
     const layoutsRow = document.getElementById('layoutsRow');
     if (layoutsRow) layoutsRow.style.display = 'none';
-    
+
     const discountRow = document.getElementById('discountRow');
     if (discountRow) discountRow.style.display = 'none';
-    
+
     const details = document.getElementById('details');
     if (details) details.innerHTML = '';
-    
+
     const minimumCostMessage = document.getElementById('minimumCostMessage');
     if (minimumCostMessage) minimumCostMessage.style.display = 'none';
 }
@@ -921,13 +859,12 @@ function displayResults(result, input) {
     const minimumCostValue = document.getElementById('minimumCostValue');
     const weightValue = document.getElementById('weightValue');
     
-    // Расчет веса заказа - используем количество листов из результата
     const orderWeight = calculateOrderWeight(result.breakdown.sheets, input.density);
     const formattedWeight = formatWeight(orderWeight);
-    
+
     if (totalEl) totalEl.textContent = formatCurrency(result.total);
     if (perPieceEl) perPieceEl.textContent = formatCurrencyWithCents(result.perPiece);
-    
+
     if (printCost) printCost.textContent = formatCurrency(result.breakdown.printPrice);
     if (materialCost) materialCost.textContent = formatCurrency(result.breakdown.materialPrice);
     if (laminationCost) laminationCost.textContent = formatCurrency(result.breakdown.laminationPrice);
@@ -937,7 +874,7 @@ function displayResults(result, input) {
     if (gluingCost) gluingCost.textContent = formatCurrency(result.gluingPrice);
     if (deliveryCost) deliveryCost.textContent = formatCurrency(result.deliveryCost);
     if (weightValue) weightValue.textContent = formattedWeight;
-    
+
     if (colorMatchingCost) {
         if (result.colorMatchingPrice > 0) {
             colorMatchingCost.textContent = formatCurrency(result.colorMatchingPrice);
@@ -946,7 +883,7 @@ function displayResults(result, input) {
             if (colorMatchingRow) colorMatchingRow.style.display = 'none';
         }
     }
-    
+
     if (layoutsCost) {
         if (result.layoutsPrice > 0) {
             layoutsCost.textContent = formatCurrency(result.layoutsPrice);
@@ -955,7 +892,7 @@ function displayResults(result, input) {
             if (layoutsRow) layoutsRow.style.display = 'none';
         }
     }
-    
+
     if (discountAmount && discountRow) {
         if (input.discountPercent > 0) {
             discountAmount.textContent = formatCurrency(result.discountAmount);
@@ -964,10 +901,10 @@ function displayResults(result, input) {
             discountRow.style.display = 'none';
         }
     }
-    
+
     const printPlusMaterial = result.breakdown.printPrice + result.breakdown.materialPrice;
     const isMinimumApplied = printPlusMaterial < MINIMUM_ORDER_COST;
-    
+
     if (minimumCostMessage && minimumCostValue) {
         if (isMinimumApplied) {
             minimumCostValue.textContent = formatCurrency(MINIMUM_ORDER_COST);
@@ -976,7 +913,7 @@ function displayResults(result, input) {
             minimumCostMessage.style.display = 'none';
         }
     }
-    
+
     if (details) {
         const material = input.material;
         const printTypeText = input.colorMode === '40' ? 'Односторонняя (4+0)' : 'Двусторонняя (4+4)';
@@ -1002,59 +939,62 @@ function displayResults(result, input) {
         detailsHTML += `<p><strong>Количество листов:</strong> ${result.breakdown.sheets}</p>`;
         detailsHTML += `<p><strong>Вид печати:</strong> ${printTypeText}</p>`;
         
-        // Отображаем информацию о материале (с учетом возможной смены для увеличенного формата)
         const displayMaterial = result.actualMaterial || material;
         detailsHTML += `<p><strong>Материал:</strong> ${escapeHtml(displayMaterial?.name || '—')} ${input.density ? `(${input.density} г/м²)` : ''}</p>`;
         
-        detailsHTML += `<p><strong>Стоимость материала:</strong> ${formatCurrency(result.materialPricePerSheet)} × ${result.breakdown.sheets} = ${formatCurrency(result.breakdown.materialPrice)}</p>`;
-        detailsHTML += `<p><strong>Стоимость печати:</strong> ${formatCurrency(printPricePerSheet)} × ${result.breakdown.sheets} = ${formatCurrency(result.breakdown.printPrice)}</p>`;
+        // Price Breakdown секция в стиле калькулятора ручек
+        detailsHTML += `<div class="price-breakdown">`;
+        detailsHTML += `<h4>Детализация стоимости:</h4>`;
+        
+        detailsHTML += `<div class="price-breakdown-item"><span>Стоимость материала:</span><span>${formatCurrency(result.materialPricePerSheet)} × ${result.breakdown.sheets} = ${formatCurrency(result.breakdown.materialPrice)}</span></div>`;
+        
+        detailsHTML += `<div class="price-breakdown-item"><span>Стоимость печати:</span><span>${formatCurrency(printPricePerSheet)} × ${result.breakdown.sheets} = ${formatCurrency(result.breakdown.printPrice)}</span></div>`;
         
         if (input.lamination && !input.lamination.toLowerCase().includes('без ламинации') && result.breakdown.laminationPrice > 0) {
-            detailsHTML += `<p><strong>Ламинация:</strong> ${escapeHtml(input.lamination)}</p>`;
-            detailsHTML += `<p><strong>Стоимость ламинации:</strong> ${formatCurrency(laminationPricePerSheet)} × ${result.breakdown.sheets} = ${formatCurrency(result.breakdown.laminationPrice)}</p>`;
-        } else {
-            detailsHTML += `<p><strong>Ламинация:</strong> без ламинации</p>`;
+            detailsHTML += `<div class="price-breakdown-item"><span>Ламинация (${escapeHtml(input.lamination)}):</span><span>${formatCurrency(laminationPricePerSheet)} × ${result.breakdown.sheets} = ${formatCurrency(result.breakdown.laminationPrice)}</span></div>`;
         }
         
-        // Информация о резке
         if (input.cuttingType !== 'none' && input.cuttingType !== 'plotter') {
             let cuttingDescription = '';
             if (input.cuttingType === 'guillotine_percent') {
                 cuttingDescription = 'гильотина (10% от печати)';
             }
-            detailsHTML += `<p><strong>Резка:</strong> ${cuttingDescription} = ${formatCurrency(result.cuttingPrice)}</p>`;
+            detailsHTML += `<div class="price-breakdown-item"><span>Резка (${cuttingDescription}):</span><span>${formatCurrency(result.cuttingPrice)}</span></div>`;
         }
         
         if (input.scoringCount > 0) {
-            detailsHTML += `<p><strong>Биговка/Фальцовка:</strong> ${input.scoringCount} × ${input.circulation} × ${formatCurrency(result.scoringPricePerUnit)} = ${formatCurrency(result.scoringPrice)}</p>`;
+            detailsHTML += `<div class="price-breakdown-item"><span>Биговка/Фальцовка:</span><span>${input.scoringCount} × ${input.circulation} × ${formatCurrency(result.scoringPricePerUnit)} = ${formatCurrency(result.scoringPrice)}</span></div>`;
         }
         
         if (input.foldingCount > 0) {
-            detailsHTML += `<p><strong>Перфорация:</strong> ${input.foldingCount} × ${input.circulation} × ${formatCurrency(result.foldingPricePerUnit)} = ${formatCurrency(result.foldingPrice)}</p>`;
+            detailsHTML += `<div class="price-breakdown-item"><span>Перфорация:</span><span>${input.foldingCount} × ${input.circulation} × ${formatCurrency(result.foldingPricePerUnit)} = ${formatCurrency(result.foldingPrice)}</span></div>`;
         }
         
         if (input.gluingCount > 0) {
-            detailsHTML += `<p><strong>Склейка:</strong> ${input.gluingCount} × ${input.circulation} × ${formatCurrency(result.gluingPricePerUnit)} = ${formatCurrency(result.gluingPrice)}</p>`;
+            detailsHTML += `<div class="price-breakdown-item"><span>Склейка:</span><span>${input.gluingCount} × ${input.circulation} × ${formatCurrency(result.gluingPricePerUnit)} = ${formatCurrency(result.gluingPrice)}</span></div>`;
         }
         
         if (input.colorMatching === 'yes') {
-            detailsHTML += `<p><strong>Подбор цвета:</strong> ${formatCurrency(result.colorMatchingPrice)}</p>`;
+            detailsHTML += `<div class="price-breakdown-item"><span>Подбор цвета:</span><span>${formatCurrency(result.colorMatchingPrice)}</span></div>`;
         }
         
         if (input.layoutsCount > 1) {
-            detailsHTML += `<p><strong>Доплата за макеты:</strong> ${input.layoutsCount} × 145 = ${formatCurrency(result.layoutsPrice)}</p>`;
+            detailsHTML += `<div class="price-breakdown-item"><span>Доплата за макеты:</span><span>${input.layoutsCount} × 145 = ${formatCurrency(result.layoutsPrice)}</span></div>`;
         }
         
+        detailsHTML += `<div class="price-breakdown-item" style="font-weight: bold; border-top: 1px solid #ccc; margin-top: 5px; padding-top: 10px;"><span>ИТОГО (печать + материал):</span><span>${formatCurrency(result.breakdown.printPrice + result.breakdown.materialPrice)}</span></div>`;
+        
         if (input.discountPercent > 0) {
-            detailsHTML += `<p><strong>Скидка:</strong> ${input.discountPercent}% = ${formatCurrency(result.discountAmount)}</p>`;
+            detailsHTML += `<div class="price-breakdown-item"><span>Скидка (${input.discountPercent}%):</span><span>- ${formatCurrency(result.discountAmount)}</span></div>`;
         }
         
         if (input.deliveryCost > 0) {
-            detailsHTML += `<p><strong>Доставка:</strong> ${formatCurrency(input.deliveryCost)}</p>`;
+            detailsHTML += `<div class="price-breakdown-item"><span>Доставка:</span><span>${formatCurrency(input.deliveryCost)}</span></div>`;
         }
         
-        // Добавляем вес заказа в детали
-        detailsHTML += `<p><strong>Вес заказа:</strong> ${formattedWeight}</p>`;
+        detailsHTML += `</div>`;
+        
+        detailsHTML += `<div class="order-weight"><span>Вес заказа:</span><span>${formattedWeight}</span></div>`;
         
         if (isMinimumApplied) {
             detailsHTML += `<p style="color: #dc3545; font-style: italic; margin-top: 10px;">Минимальная стоимость печати: ${formatCurrency(MINIMUM_ORDER_COST)}</p>`;
@@ -1064,12 +1004,9 @@ function displayResults(result, input) {
     }
 }
 
-// ========== ФУНКЦИИ ДЛЯ РАБОТЫ С БИТРИКС24 ==========
-
 function createScreenshot() {
     return new Promise((resolve, reject) => {
         const target = document.getElementById('calculator');
-        
         if (!target) {
             reject(new Error('Не найден элемент для скриншота'));
             return;
@@ -1104,7 +1041,6 @@ async function sendToBitrix24(base64Image, dealId) {
                 deal_id: dealId
             })
         });
-        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -1117,14 +1053,11 @@ async function sendToBitrix24(base64Image, dealId) {
         }
         
         return result;
-        
     } catch (error) {
         console.error('Ошибка отправки:', error);
         throw error;
     }
 }
-
-// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 
 function downloadScreenshot(base64Image, clientName) {
     const link = document.createElement('a');
@@ -1140,20 +1073,7 @@ function getClientName() {
 function showLoadingIndicator(message = 'Загрузка...') {
     const indicator = document.createElement('div');
     indicator.id = 'bitrixLoadingIndicator';
-    indicator.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255,255,255,0.9);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 30000;
-    `;
-    
+    indicator.style.cssText = `position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 30000;`;
     indicator.innerHTML = `
         <div style="
             width: 50px;
@@ -1166,7 +1086,7 @@ function showLoadingIndicator(message = 'Загрузка...') {
         "></div>
         <div style="color: #333; font-size: 18px;">${message}</div>
     `;
-    
+
     document.body.appendChild(indicator);
 }
 
@@ -1181,7 +1101,6 @@ function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     let bgColor = type === 'success' ? '#4CAF50' : '#f44336';
     if (type === 'warning') bgColor = '#FF9800';
-    
     notification.style.cssText = `
         position: fixed;
         top: 20px;
@@ -1196,11 +1115,11 @@ function showNotification(message, type = 'success') {
         max-width: 400px;
         word-wrap: break-word;
     `;
-    
+
     notification.innerHTML = `<strong>${message}</strong>`;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => {
@@ -1215,7 +1134,6 @@ function buildFileName(clientName) {
     const now = new Date();
     const date = now.toISOString().slice(0, 10);
     const time = now.toTimeString().slice(0, 8).replace(/:/g, '-');
-
     if (clientName && clientName.trim() !== '') {
         const safeClient = clientName
             .trim()
@@ -1261,9 +1179,8 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-console.log('ui.js загружен');
+console.log('uiilst.js загружен');
 
-// Автоматическая инициализация
 (async function() {
     try {
         console.log('Загрузка данных...');
